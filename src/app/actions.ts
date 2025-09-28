@@ -11,6 +11,9 @@ import { adminAuth } from "@/lib/firebase-admin";
 
 
 async function getAuthenticatedUser(idToken: string) {
+    if (!adminAuth) {
+        throw new Error("Firebase Admin SDK not initialized. Check server logs for details.");
+    }
     try {
         const decodedToken = await adminAuth.verifyIdToken(idToken);
         return decodedToken;
