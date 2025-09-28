@@ -1,13 +1,13 @@
 "use client";
 
 import { useAuth } from "@/context/auth-context";
-import { getUserPdfs } from "@/app/actions";
 import { PDFDocument } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { FileText, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { getUserPdfsFromLocalStorage } from "@/lib/local-storage";
 
 export default function PdfList() {
   const { user } = useAuth();
@@ -16,20 +16,31 @@ export default function PdfList() {
 
   useEffect(() => {
     if (user) {
-      const fetchPdfs = async () => {
-        setLoading(true);
-        const idToken = await user.getIdToken();
-        const userPdfs = await getUserPdfs(idToken);
-        setPdfs(userPdfs);
-        setLoading(false);
-      };
-      fetchPdfs();
+      setLoading(true);
+      const userPdfs = getUserPdfsFromLocalStorage(user.uid);
+      setPdfs(userPdfs);
+      setLoading(false);
     } else {
-        // If there's no user, we're probably still in the initial loading state of the auth context.
-        // If it finishes and there's no user, the auth guard will redirect.
-        // So we can just show loading.
         setLoading(true);
     }
+
+    // Set up a listener for storage changes to update the list
+    const handleStorageChange = () => {
+      if (user) {
+        const userPdfs = getUserPdfsFromLocalStorage(user.uid);
+        setPdfs(userPdfs);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('pdfsUpdated', handleStorageChange);
+
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('pdfsUpdated', handleStorageChange);
+    }
+
   }, [user]);
 
   if (loading) {
@@ -68,7 +79,7 @@ export default function PdfList() {
                 {pdf.name}
               </CardTitle>
               <CardDescription>
-                Uploaded {formatDistanceToNow(pdf.createdAt.toDate(), { addSuffix: true })}
+                Uploaded {formatDistanceToNow(new Date(pdf.createdAt), { addSuffix: true })}
               </CardDescription>
             </div>
           </Card>

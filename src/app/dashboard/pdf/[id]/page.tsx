@@ -1,30 +1,38 @@
-import { getPdfDocument } from "@/app/actions";
-import { auth } from "@/lib/firebase";
-import { notFound } from "next/navigation";
+"use client";
+
+import { notFound, useParams } from "next/navigation";
 import { FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatInterface from "@/components/chat-interface";
 import TestGenerator from "@/components/test-generator";
-import { getTokens } from "next-firebase-auth-edge/lib/next/tokens";
-import { cookies } from "next/headers";
-import { authConfig } from "@/lib/auth-config";
+import { useEffect, useState } from "react";
+import { getPdfById } from "@/lib/local-storage";
+import { PDFDocument } from "@/lib/types";
+import PdfPageLoading from "./loading";
+import { useAuth } from "@/context/auth-context";
 
-type PageProps = {
-  params: {
-    id: string;
-  };
-};
+export default function PdfPage() {
+  const params = useParams();
+  const { user } = useAuth();
+  const [pdf, setPdf] = useState<PDFDocument | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function PdfPage({ params }: PageProps) {
-  const tokens = await getTokens(cookies(), authConfig);
+  const docId = params.id as string;
 
-  if (!tokens) {
-    notFound();
+  useEffect(() => {
+    if (user && docId) {
+      const foundPdf = getPdfById(user.uid, docId);
+      setPdf(foundPdf);
+    }
+    setLoading(false);
+  }, [user, docId]);
+
+  if (loading) {
+    return <PdfPageLoading />;
   }
-
-  const pdf = await getPdfDocument(tokens.token, params.id);
+  
   if (!pdf) {
     notFound();
   }

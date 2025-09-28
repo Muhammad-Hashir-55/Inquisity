@@ -15,8 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, FileCheck, AlertCircle } from "lucide-react";
-import { uploadPdfAndCreateDocument } from "@/app/actions";
 import { useAuth } from "@/context/auth-context";
+import { savePdfToLocalStorage } from "@/lib/local-storage";
 
 export function PdfUploadModal() {
   const [open, setOpen] = useState(false);
@@ -64,7 +64,6 @@ export function PdfUploadModal() {
     setProgressMessage("Preparing file...");
 
     try {
-      const idToken = await user.getIdToken();
       const fileBuffer = await file.arrayBuffer();
 
       setProgressMessage("Extracting text from PDF...");
@@ -81,23 +80,24 @@ export function PdfUploadModal() {
         text += textContent.items.map((item: any) => item.str).join(" ");
       }
       
-      setProgressMessage("Uploading to secure storage...");
-      const result = await uploadPdfAndCreateDocument(idToken, file.name, fileBuffer, text);
+      setProgressMessage("Saving to local storage...");
+      savePdfToLocalStorage(user.uid, file.name, text);
 
-      if (result.success) {
-        setStatus("success");
-        setProgressMessage("Upload complete!");
-        toast({
-          title: "Upload Successful",
-          description: `${file.name} has been uploaded.`,
-        });
-        setTimeout(() => {
-          setOpen(false);
-          resetState();
-        }, 1500);
-      } else {
-        throw new Error(result.message);
-      }
+      setStatus("success");
+      setProgressMessage("Upload complete!");
+      toast({
+        title: "Upload Successful",
+        description: `${file.name} has been saved locally.`,
+      });
+
+      // Dispatch a custom event to notify other components like PdfList
+      window.dispatchEvent(new CustomEvent('pdfsUpdated'));
+
+      setTimeout(() => {
+        setOpen(false);
+        resetState();
+      }, 1500);
+
     } catch (error: any) {
       setStatus("error");
       setProgressMessage(`Upload failed: ${error.message}`);
@@ -127,7 +127,7 @@ export function PdfUploadModal() {
         <DialogHeader>
           <DialogTitle>Upload New PDF</DialogTitle>
           <DialogDescription>
-            Select a PDF file to upload. The text will be extracted for AI interaction.
+            Select a PDF file to upload. It will be saved in your browser's local storage.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -151,7 +151,7 @@ export function PdfUploadModal() {
           {status === "idle" ? (
              <>
               <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-              <Button onClick={handleUpload} disabled={!file}>Upload File</Button>
+              <Button onClick={handleUpload} disabled={!file}>Save File</Button>
             </>
           ) : (
             <DialogClose asChild><Button variant="outline">Close</Button></DialogClose>
