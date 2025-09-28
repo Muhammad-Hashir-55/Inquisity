@@ -1,21 +1,13 @@
 "use server";
 
-import { auth, firestore, storage } from "@/lib/firebase";
+import { firestore, storage } from "@/lib/firebase";
 import { PDFDocument } from "@/lib/types";
-import { addDoc, collection, getDocs, query, where, serverTimestamp, doc, getDoc } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { answerPdfQuestions } from '@/ai/flows/answer-pdf-questions';
 import { generatePdfTest } from '@/ai/flows/generate-pdf-test';
-import { User } from "firebase/auth";
-
-async function getAuthenticatedUser(): Promise<User> {
-    const user = auth.currentUser;
-    if (!user) {
-        throw new Error("User is not authenticated.");
-    }
-    return user;
-}
+import { currentUser } from '@genkit-ai/next/auth/helpers';
 
 
 export async function uploadPdfAndCreateDocument(
@@ -24,7 +16,10 @@ export async function uploadPdfAndCreateDocument(
   extractedText: string
 ) {
   try {
-    const user = await getAuthenticatedUser();
+    const user = await currentUser();
+    if (!user) {
+        throw new Error("User is not authenticated.");
+    }
     
     // Upload file to Firebase Storage
     const storageRef = ref(storage, `users/${user.uid}/pdfs/${Date.now()}_${fileName}`);
@@ -47,9 +42,13 @@ export async function uploadPdfAndCreateDocument(
   }
 }
 
-export async function getUserPdfs(userId: string): Promise<PDFDocument[]> {
+export async function getUserPdfs(): Promise<PDFDocument[]> {
     try {
-        const q = query(collection(firestore, 'users', userId, 'pdfs'));
+        const user = await currentUser();
+        if (!user) {
+            return [];
+        }
+        const q = query(collection(firestore, 'users', user.uid, 'pdfs'));
         const querySnapshot = await getDocs(q);
         const pdfs: PDFDocument[] = [];
         querySnapshot.forEach((doc) => {

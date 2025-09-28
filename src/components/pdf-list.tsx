@@ -18,7 +18,7 @@ export default function PdfList() {
     if (user) {
       const fetchPdfs = async () => {
         setLoading(true);
-        const userPdfs = await getUserPdfs(user.uid);
+        const userPdfs = await getUserPdfs();
         setPdfs(userPdfs);
         setLoading(false);
       };
