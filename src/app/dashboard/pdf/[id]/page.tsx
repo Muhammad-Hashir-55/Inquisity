@@ -1,8 +1,8 @@
 import { getPdfDocument } from "@/app/actions";
 import { useAuth } from "@/context/auth-context";
-import { currentUser } from "@genkit-ai/next/auth";
+import { currentUser } from '@genkit-ai/next/auth/helpers';
 import { notFound } from "next/navigation";
-import { FileText, ArrowLeft } from "lucide-radix-react";
+import { FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

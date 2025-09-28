@@ -9,10 +9,10 @@ import { FileText, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 
-export default function PdfList({ initialPdfs }: { initialPdfs: PDFDocument[] }) {
+export default function PdfList() {
   const { user } = useAuth();
-  const [pdfs, setPdfs] = useState<PDFDocument[]>(initialPdfs);
-  const [loading, setLoading] = useState(initialPdfs.length === 0);
+  const [pdfs, setPdfs] = useState<PDFDocument[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -23,6 +23,11 @@ export default function PdfList({ initialPdfs }: { initialPdfs: PDFDocument[] })
         setLoading(false);
       };
       fetchPdfs();
+    } else {
+        // If there's no user, we're probably still in the initial loading state of the auth context.
+        // If it finishes and there's no user, the auth guard will redirect.
+        // So we can just show loading.
+        setLoading(true);
     }
   }, [user]);
 
