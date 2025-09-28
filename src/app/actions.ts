@@ -7,16 +7,28 @@ import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { revalidatePath } from "next/cache";
 import { answerPdfQuestions } from '@/ai/flows/answer-pdf-questions';
 import { generatePdfTest } from '@/ai/flows/generate-pdf-test';
-import { currentUser } from '@genkit-ai/next/auth/helpers';
+import { adminAuth } from "@/lib/firebase-admin";
+
+
+async function getAuthenticatedUser(idToken: string) {
+    try {
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        return decodedToken;
+    } catch (error) {
+        console.error("Error verifying ID token:", error);
+        return null;
+    }
+}
 
 
 export async function uploadPdfAndCreateDocument(
+  idToken: string,
   fileName: string,
   fileBuffer: ArrayBuffer,
   extractedText: string
 ) {
   try {
-    const user = await currentUser();
+    const user = await getAuthenticatedUser(idToken);
     if (!user) {
         throw new Error("User is not authenticated.");
     }
@@ -42,9 +54,9 @@ export async function uploadPdfAndCreateDocument(
   }
 }
 
-export async function getUserPdfs(): Promise<PDFDocument[]> {
+export async function getUserPdfs(idToken: string): Promise<PDFDocument[]> {
     try {
-        const user = await currentUser();
+        const user = await getAuthenticatedUser(idToken);
         if (!user) {
             return [];
         }
@@ -62,9 +74,14 @@ export async function getUserPdfs(): Promise<PDFDocument[]> {
 }
 
 
-export async function getPdfDocument(userId: string, docId: string): Promise<PDFDocument | null> {
+export async function getPdfDocument(idToken: string, docId: string): Promise<PDFDocument | null> {
     try {
-        const docRef = doc(firestore, 'users', userId, 'pdfs', docId);
+        const user = await getAuthenticatedUser(idToken);
+        if (!user) {
+            return null;
+        }
+
+        const docRef = doc(firestore, 'users', user.uid, 'pdfs', docId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {

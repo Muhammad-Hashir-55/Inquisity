@@ -1,6 +1,5 @@
 import { getPdfDocument } from "@/app/actions";
-import { useAuth } from "@/context/auth-context";
-import { currentUser } from '@genkit-ai/next/auth/helpers';
+import { auth } from "@/lib/firebase";
 import { notFound } from "next/navigation";
 import { FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -8,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChatInterface from "@/components/chat-interface";
 import TestGenerator from "@/components/test-generator";
+import { getTokens } from "next-firebase-auth-edge/lib/next/tokens";
+import { cookies } from "next/headers";
+import { authConfig } from "@/lib/auth-config";
 
 type PageProps = {
   params: {
@@ -16,12 +18,13 @@ type PageProps = {
 };
 
 export default async function PdfPage({ params }: PageProps) {
-  const user = await currentUser();
-  if (!user) {
+  const tokens = await getTokens(cookies(), authConfig);
+
+  if (!tokens) {
     notFound();
   }
 
-  const pdf = await getPdfDocument(user.uid, params.id);
+  const pdf = await getPdfDocument(tokens.token, params.id);
   if (!pdf) {
     notFound();
   }
@@ -49,7 +52,7 @@ export default async function PdfPage({ params }: PageProps) {
       
       <Tabs defaultValue="qa" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="qa">Q&amp;A</TabsTrigger>
+          <TabsTrigger value="qa">Q&A</TabsTrigger>
           <TabsTrigger value="test">Generate Test</TabsTrigger>
         </TabsList>
         <TabsContent value="qa">

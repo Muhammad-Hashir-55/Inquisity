@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, FileCheck, AlertCircle } from "lucide-react";
 import { uploadPdfAndCreateDocument } from "@/app/actions";
+import { useAuth } from "@/context/auth-context";
 
 export function PdfUploadModal() {
   const [open, setOpen] = useState(false);
@@ -23,6 +24,7 @@ export function PdfUploadModal() {
   const [status, setStatus] = useState<"idle" | "uploading" | "success" | "error">("idle");
   const [progressMessage, setProgressMessage] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -48,11 +50,21 @@ export function PdfUploadModal() {
       });
       return;
     }
+    
+    if (!user) {
+        toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "You must be logged in to upload a file.",
+        });
+        return;
+    }
 
     setStatus("uploading");
     setProgressMessage("Preparing file...");
 
     try {
+      const idToken = await user.getIdToken();
       const fileBuffer = await file.arrayBuffer();
 
       setProgressMessage("Extracting text from PDF...");
@@ -70,7 +82,7 @@ export function PdfUploadModal() {
       }
       
       setProgressMessage("Uploading to secure storage...");
-      const result = await uploadPdfAndCreateDocument(file.name, fileBuffer, text);
+      const result = await uploadPdfAndCreateDocument(idToken, file.name, fileBuffer, text);
 
       if (result.success) {
         setStatus("success");
